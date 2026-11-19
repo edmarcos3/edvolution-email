@@ -1,0 +1,11 @@
+:root { --azul:#001260; --acento:#325cf6; --suave:#5b6478; }
+* { box-sizing: border-box; }
+body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#f4f6fb; font:16px/1.55 Roboto, Arial, Helvetica, sans-serif; color:#0b0b0b; padding:16px; }
+.caja { background:#fff; border-radius:14px; max-width:460px; width:100%; overflow:hidden; box-shadow:0 2px 20px rgba(0,18,96,.08); }
+.cab { background:var(--azul); color:#fff; padding:18px 26px; font:700 19px 'IBM Plex Mono', Menlo, Consolas, monospace; }
+.cuerpo { padding:24px 26px 28px; }
+h1 { font:700 19px 'IBM Plex Mono', Menlo, Consolas, monospace; color:var(--azul); margin:0 0 10px; }
+p { margin:0 0 14px; } .suave { color:var(--suave); font-size:14px; }
+button, .btn { display:inline-block; background:var(--acento); color:#fff; border:0; border-radius:8px; padding:12px 20px; font:700 14px 'IBM Plex Mono', Menlo, monospace; text-transform:uppercase; cursor:pointer; text-decoration:none; }
+button:disabled { opacity:.5; }
+a { color:var(--acento); }

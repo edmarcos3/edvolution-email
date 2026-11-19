@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Edvolution</title><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="caja"><div class="cab">edvolution</div><div class="cuerpo"><p id="msg">Abriendo el enlace…</p></div></div>
+<script src="config.js"></script>
+<script>
+// Apunta el clic en Apps Script y redirige al destino guardado (nunca a una URL que venga en el enlace).
+(function () {
+  var q = new URLSearchParams(location.search);
+  var e = q.get('e') || '', l = q.get('l') || '';
+  var hecho = false;
+  function fallo() { if (hecho) return; hecho = true; document.getElementById('msg').innerHTML = 'No hemos podido abrir el enlace. Visita <a href="https://edvolution.io">edvolution.io</a>.'; }
+  window.destino = function (r) {
+    if (hecho) return; hecho = true;
+    if (r && /^https?:\/\//.test(r.url || '')) location.replace(r.url); else { hecho = false; fallo(); }
+  };
+  if (!/^[a-f0-9]{16}$/.test(e) || !/^\d+$/.test(l)) return fallo();
+  var s = document.createElement('script');
+  s.src = window.EDV_EXEC_URL + '?a=c&e=' + e + '&l=' + l + '&callback=destino';
+  s.onerror = fallo;
+  document.body.appendChild(s);
+  setTimeout(fallo, 10000);
+})();
+</script></body></html>

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --azul:#001260; --acento:#325cf6; --tinta:#0b0b0b; --bg:#f4f6fb; --borde:#dfe4f0; --suave:#5b6478; --ok:#12805c; --mal:#c0392b; --aviso:#fff6d6; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 Roboto, Arial, sans-serif; color:var(--tinta); background:var(--bg); }
+  header { background:var(--azul); color:#fff; padding:10px 18px; display:flex; gap:6px; align-items:center; position:sticky; top:0; z-index:5; }
+  header b { font:700 15px 'IBM Plex Mono', monospace; margin-right:14px; } header b span { color:#8fa6ff; }
+  header button { background:none; border:0; color:#c9d3ff; font:inherit; padding:6px 12px; border-radius:8px; cursor:pointer; }
+  header button.activa, header button:hover { background:rgba(255,255,255,.14); color:#fff; }
+  main { padding:18px 20px 40px; }
+  h1 { font:700 20px 'IBM Plex Mono', monospace; color:var(--azul); margin:0 0 4px; }
+  h2 { font:700 13px 'IBM Plex Mono', monospace; color:var(--azul); text-transform:uppercase; letter-spacing:.04em; margin:22px 0 10px; }
+  .sub, .ayuda { color:var(--suave); } .ayuda { font-size:12.5px; } .sub { margin:0 0 16px; }
+  .caja { background:#fff; border:1px solid var(--borde); border-radius:12px; padding:14px 16px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .kpi { background:#fff; border:1px solid var(--borde); border-radius:12px; padding:12px 14px; }
+  .kpi b { display:block; font:700 24px 'IBM Plex Mono', monospace; color:var(--azul); }
+  .kpi span { font-size:12px; color:var(--suave); }
+  .kpi.d { background:var(--azul); } .kpi.d b, .kpi.d span { color:#fff; }
+  .btn { border:1px solid var(--borde); background:#fff; padding:7px 13px; border-radius:8px; font:inherit; cursor:pointer; white-space:nowrap; }
+  .btn:hover { border-color:var(--acento); } .btn:disabled { opacity:.45; cursor:default; }
+  .btn.p { background:var(--acento); border-color:var(--acento); color:#fff; } .btn.ok { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .btn.peq { padding:3px 9px; font-size:12.5px; } .btn.mal { color:var(--mal); }
+  .barra { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; } .esp { flex:1; }
+  input, select, textarea { width:100%; font:inherit; border:1px solid var(--borde); border-radius:8px; padding:7px 10px; background:#fff; }
+  textarea { min-height:220px; font:13px/1.55 'IBM Plex Mono', monospace; resize:vertical; }
+  label.et { display:block; font-size:12px; color:var(--suave); margin:8px 0 3px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; font-weight:500; color:var(--suave); font-size:12px; border-bottom:1px solid var(--borde); padding:6px 8px; }
+  td { padding:7px 8px; border-bottom:1px solid #eef1f8; vertical-align:top; }
+  tr.clic { cursor:pointer; } tr.clic:hover td { background:#f7f9ff; }
+  .estado { padding:2px 8px; border-radius:10px; background:#eef1f8; font-size:12px; white-space:nowrap; }
+  .estado.enviada, .estado.activa, .estado.enviado { background:#dcf3ea; color:var(--ok); }
+  .estado.programada, .estado.enviando { background:#e5ebff; color:var(--acento); }
+  .estado.pausada, .estado.error { background:#fde8e6; color:var(--mal); }
+  .pct { font:700 13px 'IBM Plex Mono', monospace; color:var(--azul); }
+  .editor { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
+  .tres { display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
+  .vista { position:sticky; top:60px; } .vista iframe { width:100%; height:620px; border:1px solid var(--borde); border-radius:12px; background:#fff; }
+  .paso { border:1px solid var(--borde); border-radius:10px; padding:10px 12px; margin-bottom:10px; background:#fafbfe; }
+  .paso.sel { border-color:var(--acento); box-shadow:0 0 0 2px #e5ebff; }
+  .paso textarea { min-height:150px; }
+  .aviso { background:var(--aviso); border:1px solid #f0d27a; border-radius:10px; padding:10px 14px; margin-bottom:14px; }
+  .confirmar { border:2px solid var(--mal); background:#fff7f6; border-radius:10px; padding:12px 14px; margin-top:10px; }
+  .vacio { text-align:center; color:var(--suave); padding:40px; background:#fff; border:1px dashed var(--borde); border-radius:12px; }
+  #toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:var(--tinta); color:#fff; padding:9px 16px; border-radius:9px; display:none; z-index:9; max-width:90%; }
+  .spin { display:inline-block; width:14px; height:14px; border:3px solid #c8d4ff; border-top-color:var(--acento); border-radius:50%; animation:g .9s linear infinite; vertical-align:middle; }
+  @keyframes g { to { transform:rotate(360deg); } }
+  code { background:#eef1f8; padding:1px 4px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <b>edvolution <span>email</span></b>
+  <button data-tab="inicio" class="activa">Inicio</button>
+  <button data-tab="ajustes">Ajustes</button>
+  <span class="esp"></span>
+  <button data-acc="nueva" data-tipo="campana">+ Campaña</button>
+  <button data-acc="nueva" data-tipo="secuencia">+ Secuencia</button>
+</header>
+<main id="app"></main>
+<div id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (iso) => (iso ? new Date(iso).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+const pct = (a, b) => (b ? Math.round((100 * a) / b) + ' %' : '—');
+const run = (fn, ...args) => new Promise((ok, ko) => google.script.run.withSuccessHandler(ok).withFailureHandler((e) => ko(new Error(e.message || e)))[fn](...args));
+const app = $('#app');
+const E = { datos: null, ed: null, sel: 0 };
+const TIPO = { campana: 'Campaña', secuencia: 'Secuencia' };
+const PLANTILLA_SEC = [
+  { dias: 0, asunto: '{{organizacion|Tu centro}} y la IA en el aula', cuerpo: 'Hola {{nombre}}:\n\nEscribe aquí el primer email. Breve, personal y con una sola pregunta al final.\n\n¿Te encaja una llamada de 20 minutos la semana que viene?' },
+  { dias: 3, asunto: '', cuerpo: 'Hola {{nombre}}:\n\nTe escribo de nuevo por si se quedó enterrado entre otros emails.' },
+  { dias: 5, asunto: '', cuerpo: 'Hola {{nombre}}:\n\nÚltimo mensaje por mi parte. Si ahora no es buen momento, lo entiendo perfectamente.' },
+];
+
+function toast(m, ms = 4000) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), ms); }
+function cargando(t = 'Cargando…') { app.innerHTML = `<div class="vacio"><span class="spin"></span> ${t}</div>`; }
+function tab(t) { document.querySelectorAll('header [data-tab]').forEach((b) => b.classList.toggle('activa', b.dataset.tab === t)); }
+
+// ── Inicio ───────────────────────────────────────────────────────────
+async function inicio() {
+  tab('inicio'); E.ed = null; cargando();
+  const d = E.datos = await run('datosApp');
+  const tot = d.campanas.reduce((a, c) => { const m = c.met; if (m) { a.env += m.enviados; a.ab += m.aperturas; a.cl += m.clics; a.re += m.respuestas; } return a; }, { env: 0, ab: 0, cl: 0, re: 0 });
+  app.innerHTML = `<h1>Email desde ${esc(d.ajustes.remitente)}</h1>
+    <p class="sub">Los contactos se editan directamente en la pestaña <b>Contactos</b> de la hoja. Envíos automáticos cada 10 minutos.</p>
+    ${d.seguimiento ? '' : '<div class="aviso"><b>Sin seguimiento todavía.</b> Los emails salen bien, pero no se miden aperturas ni clics y la baja es por email. Completa las URLs en <a href="#" data-tab="ajustes">Ajustes</a>.</div>'}
+    <div class="kpis">
+      <div class="kpi d"><b>${d.contactos.activos}</b><span>contactos activos</span></div>
+      <div class="kpi"><b>${tot.env}</b><span>emails enviados</span></div>
+      <div class="kpi"><b>${pct(tot.re, tot.env)}</b><span>respuestas</span></div>
+      <div class="kpi"><b>${pct(tot.cl, tot.env)}</b><span>clics</span></div>
+      <div class="kpi"><b>${d.hoy} / ${d.ajustes.limite}</b><span>enviados hoy / límite</span></div>
+      <div class="kpi"><b>${d.contactos.bajas + d.contactos.rebotados}</b><span>bajas y rebotes</span></div>
+    </div>
+    <h2>Campañas y secuencias</h2>
+    ${d.campanas.length ? `<div class="caja"><table><tr><th>Nombre</th><th>Tipo</th><th>Lista</th><th>Estado</th><th>Enviados</th><th>Aperturas</th><th>Clics</th><th>Respuestas</th></tr>
+      ${d.campanas.map((c) => { const m = c.met || {}; return `<tr class="clic" data-abrir="${c.id}" data-estado="${c.estado}">
+        <td><b>${esc(c.nombre)}</b><div class="ayuda">${esc(c.asunto)}</div></td><td>${TIPO[c.tipo]}</td><td>${esc(c.lista || 'todos')}</td>
+        <td><span class="estado ${c.estado}">${esc(c.estado)}</span>${c.estado === 'programada' ? `<div class="ayuda">${fmt(c.programada)}</div>` : ''}${c.inscripciones ? `<div class="ayuda">${Object.entries(c.inscripciones).map(([k, v]) => `${v} ${k}`).join(' · ')}</div>` : ''}</td>
+        <td>${m.enviados || 0}</td><td class="pct">${pct(m.aperturas, m.enviados)}</td><td class="pct">${pct(m.clics, m.enviados)}</td><td class="pct">${pct(m.respuestas, m.enviados)}</td></tr>`; }).join('')}
+    </table></div>` : '<div class="vacio">Aún no hay nada. Crea una <b>campaña</b> (un email a una lista) o una <b>secuencia</b> (varios emails con seguimiento que se paran si responden).</div>'}
+    <h2>Listas</h2>
+    <div class="caja">${d.listas.length ? d.listas.map((l) => `<span class="estado">${esc(l.nombre)} · ${l.n}</span>`).join(' ') : '<span class="ayuda">Escribe nombres de lista en la columna <code>listas</code> de Contactos (separados por comas).</span>'}</div>
+    <p class="ayuda">"Aperturas" es orientativo: Gmail y Apple Mail cargan las imágenes por su cuenta. Fíate más de clics y respuestas.</p>`;
+}
+
+// ── Editor ───────────────────────────────────────────────────────────
+function nueva(tipo) {
+  E.ed = tipo === 'secuencia'
+    ? { tipo, nombre: '', lista: '', formato: 'personal', pasos: JSON.parse(JSON.stringify(PLANTILLA_SEC)) }
+    : { tipo, nombre: '', lista: '', formato: 'newsletter', asunto: '', cuerpo: 'Hola {{nombre}}:\n\n' };
+  E.sel = 0; editor();
+}
+async function abrir(id, estado) {
+  cargando();
+  if (estado === 'borrador') { E.ed = await run('obtenerCampana', id); E.sel = 0; return editor(); }
+  return detalle(id);
+}
+function pieza() {
+  const d = E.ed;
+  if (d.tipo === 'secuencia') { const p = d.pasos[E.sel] || d.pasos[0]; return { asunto: p.asunto || d.pasos[0].asunto, cuerpo: p.cuerpo, formato: d.formato }; }
+  return { asunto: d.asunto, cuerpo: d.cuerpo, formato: d.formato };
+}
+async function editor() {
+  if (!E.datos) E.datos = await run('datosApp');
+  tab(''); const d = E.ed; const sec = d.tipo === 'secuencia';
+  const listas = E.datos.listas;
+  app.innerHTML = `<div class="barra"><button class="btn" data-tab="inicio">← Volver</button><span class="esp"></span><span class="ayuda" id="guardado">${d.id ? 'Borrador guardado' : 'Sin guardar'}</span></div>
+  <div class="editor"><div>
+    <div class="caja">
+      <h1 style="font-size:16px">${sec ? 'Secuencia' : 'Campaña'}</h1>
+      <p class="ayuda" style="margin:0">${sec ? 'Varios emails espaciados en días. Salen como emails normales en el mismo hilo y se paran si la persona responde, rebota o se da de baja.' : 'Un email a toda una lista, enviado ahora o en una fecha.'}</p>
+      <div class="tres">
+        <div><label class="et">Nombre interno</label><input data-f="nombre" value="${esc(d.nombre)}" placeholder="Seguimiento webinar noviembre"></div>
+        <div><label class="et">Lista</label><select data-f="lista"><option value="">Todos los activos (${E.datos.contactos.activos})</option>${listas.map((l) => `<option value="${esc(l.nombre)}" ${l.nombre === d.lista ? 'selected' : ''}>${esc(l.nombre)} (${l.n})</option>`).join('')}</select></div>
+        <div><label class="et">Formato</label><select data-f="formato"><option value="personal" ${d.formato === 'personal' ? 'selected' : ''}>Personal (texto + firma)</option><option value="newsletter" ${d.formato === 'newsletter' ? 'selected' : ''}>Newsletter (plantilla)</option></select></div>
+      </div>
+    </div>
+    <div class="caja" style="margin-top:12px">
+    ${sec ? d.pasos.map((p, i) => `<div class="paso ${i === E.sel ? 'sel' : ''}" data-paso="${i}">
+        <div class="barra" style="margin:0"><b>Email ${i + 1}</b>${i ? `<span class="ayuda">si no responde en</span><input type="number" min="1" max="60" data-p="dias" data-i="${i}" value="${esc(p.dias)}" style="width:64px"><span class="ayuda">días (si cae en fin de semana, el lunes)</span>` : '<span class="ayuda">al activar</span>'}<span class="esp"></span>${i ? `<button class="btn peq mal" data-quitar="${i}">Quitar</button>` : ''}</div>
+        <label class="et">Asunto${i ? ' (vacío = responde en el mismo hilo: "Re: …")' : ''}</label><input data-p="asunto" data-i="${i}" value="${esc(p.asunto)}">
+        <label class="et">Texto</label><textarea data-p="cuerpo" data-i="${i}">${esc(p.cuerpo)}</textarea></div>`).join('') + '<button class="btn" data-acc="masPaso">+ Añadir email</button>'
+      : `<label class="et">Asunto</label><input data-f="asunto" value="${esc(d.asunto)}">
+        <label class="et">Texto (Markdown)</label><textarea data-f="cuerpo" style="min-height:340px">${esc(d.cuerpo)}</textarea>`}
+      <p class="ayuda">Variables: <code>{{nombre}}</code> <code>{{organizacion}}</code> <code>{{cargo}}</code> · por defecto: <code>{{nombre|equipo}}</code>. Formato: <code>## título</code> <code>**negrita**</code> <code>[texto](https://…)</code> <code>- lista</code> · botón: <code>&gt;&gt; [Hablamos](https://edvolution.io/contacto/)</code>. El enlace de baja se añade solo.</p>
+    </div>
+    <div class="caja" style="margin-top:12px">
+      <div class="barra" style="margin:0"><button class="btn p" data-acc="guardar">Guardar</button><input id="emailsPrueba" placeholder="emails de prueba" value="${esc(E.datos.ajustes.remitente)}" style="flex:1;min-width:160px"><button class="btn" data-acc="prueba">Enviar prueba</button></div>
+      <div class="barra" style="margin:10px 0 0"><button class="btn ok" data-acc="preparar">${sec ? 'Activar secuencia…' : 'Enviar o programar…'}</button><span class="esp"></span>${d.id ? `<button class="btn peq mal" data-acc="eliminar">Eliminar borrador</button>` : ''}</div>
+      <div id="confirmar"></div>
+    </div>
+  </div>
+  <div class="vista"><div class="ayuda" id="vistaInfo">Vista previa</div><iframe id="vista"></iframe></div></div>`;
+  vista();
+}
+function vista() {
+  clearTimeout(vista.h);
+  vista.h = setTimeout(async () => {
+    if (!E.ed) return;
+    try {
+      const v = await run('vistaPrevia', pieza(), E.ed.lista);
+      const f = $('#vista'); if (!f) return;
+      f.srcdoc = v.html;
+      $('#vistaInfo').innerHTML = `<b>${esc(v.asunto)}</b> · así lo verá ${esc(v.para)}`;
+    } catch (e) { toast(e.message); }
+  }, 400);
+}
+async function guardar() {
+  E.ed.id = await run('guardarCampana', E.ed);
+  const g = $('#guardado'); if (g) g.textContent = 'Guardado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return E.ed.id;
+}
+function preparar() {
+  const sec = E.ed.tipo === 'secuencia';
+  const l = E.datos.listas.find((x) => x.nombre === E.ed.lista);
+  const n = l ? l.n : E.datos.contactos.activos;
+  $('#confirmar').innerHTML = `<div class="confirmar"><b style="color:var(--mal)">${sec ? 'Activar para' : 'Envío real a'} ${n} contactos de "${esc(E.ed.lista || 'todos')}"</b>
+    <p class="ayuda" style="margin:4px 0 8px">${sec ? 'Cada contacto recibe el email 1 a partir de la fecha y el resto según los días indicados (de lunes a viernes).' : 'No se puede deshacer una vez enviado.'} Salen poco a poco, cada 10 minutos.</p>
+    <label class="et">Cuándo (vacío = ahora)</label><input type="datetime-local" id="cuando" style="width:auto">
+    <label class="et">Escribe ENVIAR para confirmar</label>
+    <div class="barra" style="margin:0"><input id="palabra" style="width:140px" autocomplete="off"><button class="btn ok" data-acc="confirmar" id="btnConf" disabled>Confirmar</button><button class="btn" data-acc="cancelarConf">Cancelar</button></div></div>`;
+}
+
+// ── Detalle ──────────────────────────────────────────────────────────
+async function detalle(id) {
+  tab(''); cargando();
+  const d = await run('detalleCampana', id);
+  const c = d.campana, sec = c.tipo === 'secuencia';
+  const env = d.envios.filter((e) => e.estado === 'enviado');
+  const personas = (f) => new Set(env.filter(f).map((e) => e.email)).size;
+  const total = new Set(env.map((e) => e.email)).size;
+  app.innerHTML = `<div class="barra"><button class="btn" data-tab="inicio">← Volver</button><span class="esp"></span>
+      ${c.estado === 'programada' ? `<button class="btn" data-estado-a="borrador" data-id="${c.id}">Cancelar programación</button>` : ''}
+      ${c.estado === 'activa' ? `<button class="btn" data-estado-a="pausada" data-id="${c.id}">Pausar</button>` : ''}
+      ${c.estado === 'pausada' ? `<button class="btn ok" data-estado-a="activa" data-id="${c.id}">Reanudar</button>` : ''}
+      ${sec ? `<button class="btn" data-acc="editarSec" data-id="${c.id}">Editar emails</button>` : ''}</div>
+    <h1>${esc(c.nombre)}</h1><p class="sub">${TIPO[c.tipo]} · <span class="estado ${c.estado}">${esc(c.estado)}</span> · lista ${esc(c.lista || 'todos')}${c.programada ? ' · ' + (c.estado === 'programada' ? 'sale el ' : 'desde el ') + fmt(c.programada) : ''}</p>
+    <div class="kpis">
+      <div class="kpi d"><b>${total}</b><span>personas contactadas</span></div>
+      <div class="kpi"><b>${pct(personas((e) => e.respuesta), total)}</b><span>respondieron (${personas((e) => e.respuesta)})</span></div>
+      <div class="kpi"><b>${pct(personas((e) => e.clics), total)}</b><span>hicieron clic (${personas((e) => e.clics)})</span></div>
+      <div class="kpi"><b>${pct(personas((e) => e.aperturas), total)}</b><span>abrieron (orientativo)</span></div>
+      <div class="kpi"><b>${personas((e) => e.rebote)} · ${personas((e) => e.baja)}</b><span>rebotes · bajas</span></div>
+    </div>
+    ${sec ? `<h2>Añadir contactos a la secuencia</h2><div class="caja"><p class="ayuda" style="margin:0 0 6px">Pega emails que ya estén en Contactos (p. ej. asistentes a un webinar). Empiezan por el email 1 en la próxima vuelta.</p>
+      <textarea id="inscribir" style="min-height:70px" placeholder="email1@centro.es, email2@colegio.org"></textarea><button class="btn" data-acc="inscribir" data-id="${c.id}" style="margin-top:6px">Añadir</button></div>
+      <h2>Contactos en la secuencia</h2><div class="caja">${d.inscripciones.length ? `<table><tr><th>Email</th><th>Próximo email</th><th>Cuándo</th><th>Estado</th></tr>${d.inscripciones.map((i) => `<tr><td>${esc(i.email)}</td><td>${i.estado === 'activa' ? 'nº ' + i.paso : '—'}</td><td class="ayuda">${i.estado === 'activa' ? fmt(i.proximo) : ''}</td><td><span class="estado ${i.estado}">${esc(i.estado)}</span></td></tr>`).join('')}</table>` : '<p class="ayuda">Nadie todavía.</p>'}</div>` : ''}
+    <h2>Enlaces</h2><div class="caja">${d.enlaces.length ? `<table><tr><th>Enlace</th><th>Clics</th><th>Personas</th></tr>${d.enlaces.map((l) => `<tr><td style="word-break:break-all">${esc(l.url)}</td><td>${l.clics}</td><td>${l.personas}</td></tr>`).join('')}</table>` : '<p class="ayuda">Sin clics.</p>'}</div>
+    <h2>Envíos</h2><div class="caja">${d.envios.length ? `<table><tr><th>Email</th>${sec ? '<th>Nº</th>' : ''}<th>Fecha</th><th>Abrió</th><th>Clics</th><th>Respondió</th><th>Estado</th></tr>${d.envios.map((e) => `<tr><td>${esc(e.email)}</td>${sec ? `<td>${e.paso}</td>` : ''}<td class="ayuda">${fmt(e.fecha)}</td><td>${e.aperturas ? '✓' : ''}</td><td>${e.clics || ''}</td><td>${e.respuesta ? '✓' : ''}</td>
+      <td><span class="estado ${e.estado}">${e.rebote ? 'rebote' : e.baja ? 'baja' : esc(e.estado)}</span>${e.error ? `<div class="ayuda">${esc(e.error)}</div>` : ''}</td></tr>`).join('')}</table>` : '<p class="ayuda">Todavía no ha salido ningún email. El primer lote sale en la próxima vuelta (cada 10 min) o con Edvolution Email → Procesar envíos ahora.</p>'}</div>`;
+}
+
+// ── Ajustes ──────────────────────────────────────────────────────────
+async function ajustes() {
+  tab('ajustes'); E.ed = null; cargando();
+  const a = (await run('datosApp')).ajustes;
+  const campo = (k, t, ayuda, tipo = 'input') => `<label class="et">${t}</label>${tipo === 'textarea' ? `<textarea data-a="${k}" style="min-height:90px;font-family:inherit">${esc(a[k])}</textarea>` : `<input data-a="${k}" value="${esc(a[k])}">`}${ayuda ? `<div class="ayuda">${ayuda}</div>` : ''}`;
+  app.innerHTML = `<h1>Ajustes</h1><p class="sub">Se envía desde <b>${esc(a.remitente)}</b>.</p>
+    <div class="editor"><div class="caja">
+      ${campo('nombre', 'Nombre del remitente', 'Lo que ve el destinatario, p. ej. "Marcos · Edvolution".')}
+      ${campo('firma', 'Firma (formato personal)', 'Texto plano, una línea por renglón.', 'textarea')}
+      ${campo('pie', 'Pie legal', 'Razón social y dirección postal (obligatorio en emails comerciales).')}
+      ${campo('web', 'Web')}
+      ${campo('logo', 'Logo para la newsletter (URL pública de un PNG en blanco)', 'Vacío = "edvolution" en texto.')}
+      ${campo('limite', 'Máximo de emails al día', 'Gmail permite ~2.000; mejor ir poco a poco con un buzón nuevo (p. ej. 100–200 al principio).')}
+    </div><div class="caja">
+      <b>Seguimiento de aperturas, clics y bajas</b>
+      ${campo('exec', 'URL de la aplicación web de Apps Script', 'Implementar → Gestionar implementaciones → copia la URL que termina en <code>/exec</code>.')}
+      ${campo('pages', 'URL de GitHub Pages', 'Por ejemplo <code>https://tuusuario.github.io/edvolution-email</code>.')}
+      <p class="ayuda">Con las dos URLs, los enlaces pasan por tu página de GitHub (que apunta el clic y redirige) y se añade el enlace de baja con confirmación. Sin ellas, los emails salen igual pero sin medir.</p>
+    </div></div>
+    <div class="barra" style="margin-top:12px"><button class="btn p" data-acc="guardarAjustes">Guardar ajustes</button></div>`;
+}
+
+// ── Eventos ──────────────────────────────────────────────────────────
+document.addEventListener('click', async (ev) => {
+  const t = ev.target.closest('[data-tab],[data-acc],[data-abrir],[data-paso],[data-quitar],[data-estado-a]');
+  if (!t) return;
+  if (t.tagName === 'A') ev.preventDefault();
+  const D = t.dataset;
+  try {
+    if (D.tab) return D.tab === 'ajustes' ? ajustes() : inicio();
+    if (D.abrir) return abrir(D.abrir, D.estado);
+    if (D.quitar) { E.ed.pasos.splice(Number(D.quitar), 1); E.sel = 0; return editor(); }
+    if (D.estadoA) { await run('cambiarEstado', D.id, D.estadoA); toast('Hecho'); return D.estadoA === 'borrador' ? inicio() : detalle(D.id); }
+    if (D.paso !== undefined && !D.acc) {
+      const i = Number(D.paso);
+      if (i !== E.sel) { E.sel = i; document.querySelectorAll('.paso').forEach((p) => p.classList.toggle('sel', Number(p.dataset.paso) === i)); vista(); }
+      return;
+    }
+    switch (D.acc) {
+      case 'nueva': return nueva(D.tipo);
+      case 'masPaso': E.ed.pasos.push({ dias: 4, asunto: '', cuerpo: 'Hola {{nombre}}:\n\n' }); E.sel = E.ed.pasos.length - 1; return editor();
+      case 'guardar': t.disabled = true; try { await guardar(); toast('Guardado'); } finally { t.disabled = false; } return;
+      case 'prueba': t.disabled = true; try { await guardar(); const n = await run('enviarPrueba', pieza(), E.ed.lista, $('#emailsPrueba').value); toast(`Prueba enviada (${n})`); } finally { t.disabled = false; } return;
+      case 'preparar': await guardar(); return preparar();
+      case 'cancelarConf': $('#confirmar').innerHTML = ''; return;
+      case 'confirmar': {
+        if ($('#palabra').value.trim() !== 'ENVIAR') return;
+        t.disabled = true;
+        const r = await run('programar', E.ed.id, $('#cuando').value || 'ahora');
+        toast(E.ed.tipo === 'secuencia' ? `Secuencia activa: ${r.n} contactos` : `Programada para ${r.n} contactos · ${fmt(r.fecha)}`, 6000);
+        const id = E.ed.id; E.ed = null; return detalle(id);
+      }
+      case 'eliminar': if (!confirm('¿Eliminar este borrador?')) return; await run('eliminarCampana', E.ed.id); toast('Eliminado'); return inicio();
+      case 'editarSec': E.ed = await run('obtenerCampana', D.id); E.sel = 0; return editor();
+      case 'inscribir': {
+        const r = await run('inscribir', D.id, $('#inscribir').value);
+        toast(`${r.nuevos} añadidos` + (r.faltan.length ? ` · ${r.faltan.length} no están en Contactos` : '') + (r.inactivos.length ? ` · ${r.inactivos.length} de baja o rebotados` : ''), 7000);
+        return detalle(D.id);
+      }
+      case 'guardarAjustes': {
+        const a = {}; document.querySelectorAll('[data-a]').forEach((i) => (a[i.dataset.a] = i.value));
+        await run('guardarAjustes', a); toast('Ajustes guardados'); return;
+      }
+    }
+  } catch (e) { toast(e.message, 7000); }
+});
+document.addEventListener('input', (ev) => {
+  const t = ev.target;
+  if (t.id === 'palabra') { $('#btnConf').disabled = t.value.trim() !== 'ENVIAR'; return; }
+  if (!E.ed) return;
+  if (t.dataset.f) { E.ed[t.dataset.f] = t.value; if (t.dataset.f !== 'nombre') vista(); }
+  if (t.dataset.p) { const i = Number(t.dataset.i); E.ed.pasos[i][t.dataset.p] = t.value; if (i !== E.sel) { E.sel = i; document.querySelectorAll('.paso').forEach((p) => p.classList.toggle('sel', Number(p.dataset.paso) === i)); } vista(); }
+});
+document.addEventListener('change', (ev) => { if (E.ed && ['lista', 'formato'].includes(ev.target.dataset.f)) { E.ed[ev.target.dataset.f] = ev.target.value; vista(); } });
+
+inicio().catch((e) => { app.innerHTML = `<div class="vacio">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

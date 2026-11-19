@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Darse de baja · Edvolution</title><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="caja"><div class="cab">edvolution</div><div class="cuerpo" id="c">
+  <h1>¿Dejar de recibir nuestros emails?</h1>
+  <p>Si confirmas, no volveremos a escribirte desde esta lista.</p>
+  <button id="b">Confirmar la baja</button>
+</div></div>
+<script src="config.js"></script>
+<script>
+(function () {
+  var e = new URLSearchParams(location.search).get('e') || '';
+  var c = document.getElementById('c'), b = document.getElementById('b');
+  function fin(ok) {
+    c.innerHTML = ok
+      ? '<h1>Hecho</h1><p>Te hemos dado de baja. Sentimos verte marchar.</p><p class="suave">Si ha sido un error, escríbenos y te volvemos a apuntar.</p>'
+      : '<h1>No hemos podido darte de baja</h1><p>Responde a cualquiera de nuestros emails con la palabra <b>BAJA</b> y lo haremos a mano.</p>';
+  }
+  if (!/^[a-f0-9]{16}$/.test(e)) { b.disabled = true; return fin(false); }
+  window.listo = function (r) { fin(r && r.ok); };
+  b.onclick = function () {
+    b.disabled = true; b.textContent = 'Un momento…';
+    var s = document.createElement('script');
+    s.src = window.EDV_EXEC_URL + '?a=b&e=' + e + '&callback=listo';
+    s.onerror = function () { fin(false); };
+    document.body.appendChild(s);
+  };
+})();
+</script></body></html>
