@@ -1,5 +1,9 @@
 // Menú, configuración inicial y tarea automática.
 
+// URLs de esta instalación (se pueden cambiar en Ajustes de la app)
+var EXEC_URL_DEFECTO = 'https://script.google.com/macros/s/AKfycbwR6xBNsO8v5S2e1fju9l2HmesSVjeggBUWGgnas45P6vpZWp30hcA19CsdgDHaHKlQvg/exec';
+var PAGES_URL_DEFECTO = 'https://edmarcos3.github.io/edvolution-email';
+
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Edvolution Email')
     .addItem('Abrir la app', 'abrirApp')
@@ -45,8 +49,8 @@ function configurar() {
   ScriptApp.newTrigger('procesar').timeBased().everyMinutes(10).create();
 
   var faltan = [];
-  if (!prop('EXEC_URL')) faltan.push('la URL de la aplicación web (para medir aperturas, clics y bajas)');
-  if (!prop('PAGES_URL')) faltan.push('la URL de GitHub Pages');
+  if (!ajustes().exec) faltan.push('la URL de la aplicación web (para medir aperturas, clics y bajas)');
+  if (!ajustes().pages) faltan.push('la URL de GitHub Pages');
   SpreadsheetApp.getUi().alert('Listo: pestañas creadas y envíos automáticos cada 10 minutos.' +
     (faltan.length ? '\n\nFalta en Ajustes de la app: ' + faltan.join(' y ') + '. Mientras tanto se envía sin seguimiento y la baja es por email.' : ''));
 }
@@ -59,8 +63,8 @@ function ajustes() {
     pie: prop('PIE', 'Transformación Digital Europea S.L.'),
     web: prop('WEB', 'https://edvolution.io'),
     logo: prop('LOGO_URL', ''),
-    exec: prop('EXEC_URL', ''),
-    pages: prop('PAGES_URL', '').replace(/\/+$/, ''),
+    exec: prop('EXEC_URL', EXEC_URL_DEFECTO),
+    pages: prop('PAGES_URL', PAGES_URL_DEFECTO).replace(/\/+$/, ''),
     limite: Number(prop('LIMITE_DIARIO', '400')),
   };
 }
