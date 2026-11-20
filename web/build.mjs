@@ -20,7 +20,32 @@ const puente = `<meta name="robots" content="noindex, nofollow">
   var K = 'edv_email_clave';
   var leerClave = function () { try { return localStorage.getItem(K) || ''; } catch (e) { return ''; } };
   var guardarClave = function (v) { try { v ? localStorage.setItem(K, v) : localStorage.removeItem(K); } catch (e) {} };
+  // Caché en el navegador: las lecturas se pintan al momento con lo último guardado y se refrescan por detrás
+  var LECTURA = ['datosApp', 'obtenerCampana', 'detalleCampana', 'listarContactos'], PC = 'edv_c:', enCurso = {};
+  var cLeer = function (k) { try { return localStorage.getItem(PC + k); } catch (e) { return null; } };
+  var cGuardar = function (k, v) { try { localStorage.setItem(PC + k, v); } catch (e) {} };
+  var cVaciar = function () { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf(PC) === 0) localStorage.removeItem(k); }); } catch (e) {} };
+  function refrescar(fn, args) {
+    var k = fn + JSON.stringify(args);
+    if (enCurso[k]) return enCurso[k];
+    return enCurso[k] = red(fn, args).then(function (r) {
+      delete enCurso[k];
+      var nuevo = JSON.stringify(r), antes = cLeer(k);
+      cGuardar(k, nuevo);
+      if (antes !== null && antes !== nuevo) window.dispatchEvent(new CustomEvent('edv-fresco', { detail: { fn: fn, args: args, r: r } }));
+      return r;
+    }, function (e) { delete enCurso[k]; throw e; });
+  }
   function llamar(fn, args) {
+    if (LECTURA.indexOf(fn) >= 0) {
+      var guardado = cLeer(fn + JSON.stringify(args)), p = refrescar(fn, args);
+      if (guardado !== null) { p.catch(function () {}); return Promise.resolve(JSON.parse(guardado)); }
+      return p;
+    }
+    cVaciar();
+    return red(fn, args).then(function (r) { refrescar('datosApp', []).catch(function () {}); return r; });
+  }
+  function red(fn, args) {
     return fetch(window.EDV_EXEC_URL, { method: 'POST', body: JSON.stringify({ clave: leerClave(), fn: fn, args: args }) })
       .then(function (r) { return r.json(); })
       .catch(function () { throw new Error('No hay conexión con Google. Revisa tu conexión e inténtalo de nuevo.'); })
@@ -56,11 +81,13 @@ const puente = `<meta name="robots" content="noindex, nofollow">
     };
     f.querySelector('input').focus();
   }
-  window.edvSalir = function () { guardarClave(''); location.reload(); };
+  window.edvSalir = function () { cVaciar(); guardarClave(''); location.reload(); };
   document.addEventListener('DOMContentLoaded', function () {
     var h = document.querySelector('header');
     if (h) { var b = document.createElement('button'); b.textContent = 'Salir'; b.onclick = window.edvSalir; h.appendChild(b); }
-    if (!leerClave()) pedirClave('');
+    if (!leerClave()) return pedirClave('');
+    // Precarga los contactos para que la pestaña abra al momento
+    setTimeout(function () { refrescar('listarContactos', [{ q: '', lista: '', estado: '', pagina: 1 }]).catch(function () {}); }, 1500);
   });
 })();
 </script>
@@ -81,8 +108,8 @@ ${plantilla}
   window.vistaLocal = function (pieza, aj, c) {
     c = c || { nombre: 'Lucía Martín', organizacion: 'Colegio Ejemplo', cargo: 'Directora', email: 'lucia@ejemplo.com' };
     var md = personalizar(pieza.cuerpo, c), asunto = personalizar(pieza.asunto, c);
-    var html = (pieza.formato === 'newsletter' ? htmlNewsletter(md, asunto, aj) : htmlPersonal(md, aj)).replace(/%%BAJA%%/g, '#').replace('%%PIXEL%%', '');
-    if (pieza.formato !== 'newsletter') html = '<!doctype html><html><body style="margin:0;padding:20px;background:#fff">' + html + '</body></html>';
+    var html = construirHtml(md, asunto, aj, pieza.formato).replace(/%%BAJA%%/g, '#').replace('%%PIXEL%%', '');
+    if (pieza.formato !== 'newsletter' && !esHtml(md)) html = '<!doctype html><html><body style="margin:0;padding:20px;background:#fff">' + html + '</body></html>';
     return { asunto: asunto, html: html, para: c.email };
   };
 })();

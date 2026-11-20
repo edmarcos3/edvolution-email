@@ -81,6 +81,7 @@ function procesar() {
     enviarCampanas(ctx);
     avanzarSecuencias(ctx);
     var r = revisarBandeja();
+    guardarResumen(); // el panel abre al momento con datos de hace menos de 10 min
     return { enviados: ctx.enviados, respuestas: r.respuestas, rebotes: r.rebotes };
   } finally { lock.releaseLock(); }
 }

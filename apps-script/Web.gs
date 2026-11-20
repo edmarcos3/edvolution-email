@@ -53,9 +53,14 @@ function apiWeb(e) {
       if (guardado) return ContentService.createTextOutput('{"r":' + guardado + '}').setMimeType(ContentService.MimeType.JSON);
     } else if (API_LECTURA.indexOf(q.fn) < 0) cache.remove('datosApp'); // cualquier cambio invalida el resumen
     var r = globalThis[q.fn].apply(null, q.args || []);
-    if (q.fn === 'datosApp') { try { cache.put('datosApp', JSON.stringify(r), 90); } catch (x) { /* demasiado grande: sin caché */ } }
+    if (q.fn === 'datosApp') guardarResumen(r);
     return salida({ r: r === undefined ? null : JSON.parse(JSON.stringify(r)) });
   } catch (err) { return salida({ error: String(err.message || err) }); }
+}
+
+/** Guarda el resumen del panel 15 min (la tarea de cada 10 min lo renueva; cualquier cambio desde el panel lo borra). */
+function guardarResumen(r) {
+  try { CacheService.getScriptCache().put('datosApp', JSON.stringify(r || datosApp()), 900); } catch (x) { /* demasiado grande: sin caché */ }
 }
 
 /** Menú de la hoja: crea una clave nueva (invalida la anterior) y la muestra una sola vez. */
@@ -81,7 +86,7 @@ function registrarClic(envioId, n) {
   if (!envio) return '';
   var url = enlacesDe(envio.campana_id, envio.paso)[Number(n)] || '';
   if (url) anadir('Eventos', { fecha: new Date(), envio_id: envioId, tipo: 'clic', detalle: url });
-  return url;
+  return String(url).replace(/&amp;/g, '&');
 }
 
 function darDeBaja(envioId, via) {

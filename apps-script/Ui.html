@@ -155,7 +155,7 @@ async function editor() {
         <label class="et">Asunto${i ? ' (vacío = responde en el mismo hilo: "Re: …")' : ''}</label><input data-p="asunto" data-i="${i}" value="${esc(p.asunto)}">
         <label class="et">Texto</label><textarea data-p="cuerpo" data-i="${i}">${esc(p.cuerpo)}</textarea></div>`).join('') + '<button class="btn" data-acc="masPaso">+ Añadir email</button>'
       : `<label class="et">Asunto</label><input data-f="asunto" value="${esc(d.asunto)}">
-        <label class="et">Texto (Markdown)</label><textarea data-f="cuerpo" style="min-height:340px">${esc(d.cuerpo)}</textarea>`}
+        <label class="et">Texto (Markdown o HTML)</label><div class="ayuda">Pega un HTML completo (empezando por <code>&lt;</code>) y se envía tal cual. Pon <code>{{baja}}</code> donde quieras el enlace de baja; si no lo pones, se añade un pie con él.</div><textarea data-f="cuerpo" style="min-height:340px">${esc(d.cuerpo)}</textarea>`}
       <p class="ayuda">Variables: <code>{{nombre}}</code> <code>{{organizacion}}</code> <code>{{cargo}}</code> · por defecto: <code>{{nombre|equipo}}</code>. Formato: <code>## título</code> <code>**negrita**</code> <code>[texto](https://…)</code> <code>- lista</code> · botón: <code>&gt;&gt; [Hablamos](https://edvolution.io/contacto/)</code>. El enlace de baja se añade solo.</p>
     </div>
     <div class="caja" style="margin-top:12px">
@@ -180,6 +180,8 @@ function vista() {
   }, window.vistaLocal ? 120 : 400);
 }
 async function guardar() {
+  const largo = [E.ed.cuerpo || ''].concat((E.ed.pasos || []).map((p) => p.cuerpo || '')).some((t) => t.length > 49000);
+  if (largo) throw new Error('El texto es demasiado largo para guardarlo (máx. ~49.000 caracteres). Quita estilos o imágenes incrustadas del HTML.');
   E.ed.id = await run('guardarCampana', E.ed);
   const g = $('#guardado'); if (g) g.textContent = 'Guardado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   return E.ed.id;
@@ -197,7 +199,7 @@ function preparar() {
 
 // ── Detalle ──────────────────────────────────────────────────────────
 async function detalle(id) {
-  tab(''); cargando();
+  tab(''); E.vista = 'detalle'; E.detalleId = id; cargando();
   const d = await run('detalleCampana', id);
   const c = d.campana, sec = c.tipo === 'secuencia';
   const env = d.envios.filter((e) => e.estado === 'enviado');
@@ -262,7 +264,7 @@ async function contactos() {
 // ── Ajustes ──────────────────────────────────────────────────────────
 async function ajustes() {
   tab('ajustes'); E.ed = null; cargando();
-  const a = (await run('datosApp')).ajustes;
+  const a = (E.datos || (E.datos = await run('datosApp'))).ajustes;
   const campo = (k, t, ayuda, tipo = 'input') => `<label class="et">${t}</label>${tipo === 'textarea' ? `<textarea data-a="${k}" style="min-height:90px;font-family:inherit">${esc(a[k])}</textarea>` : `<input data-a="${k}" value="${esc(a[k])}">`}${ayuda ? `<div class="ayuda">${ayuda}</div>` : ''}`;
   app.innerHTML = `<h1>Ajustes</h1><p class="sub">Se envía desde <b>${esc(a.remitente)}</b>.</p>
     <div class="editor"><div class="caja">
@@ -348,6 +350,13 @@ document.addEventListener('input', (ev) => {
 });
 document.addEventListener('change', (ev) => { if (E.ed && ['lista', 'formato'].includes(ev.target.dataset.f)) { E.ed[ev.target.dataset.f] = ev.target.value; vista(); } });
 
+// Panel web: cuando llegan datos más nuevos que los guardados en el navegador, se repinta la vista abierta
+window.addEventListener('edv-fresco', (ev) => {
+  const { fn, args, r } = ev.detail;
+  if (fn === 'datosApp') { E.datos = r; if (E.vista === 'inicio') pintarInicio(r); }
+  else if (fn === 'listarContactos' && E.vista === 'contactos' && !E.con.editar) contactos();
+  else if (fn === 'detalleCampana' && E.vista === 'detalle' && E.detalleId === args[0]) detalle(args[0]);
+});
 inicio().catch((e) => { app.innerHTML = `<div class="vacio">${esc(e.message)}</div>`; });
 </script>
 </body>

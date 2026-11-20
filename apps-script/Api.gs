@@ -108,7 +108,7 @@ function contactoEjemplo(lista) {
 function vistaPrevia(pieza, lista) {
   var c = contactoEjemplo(lista);
   var e = prepararEmail(pieza, c, 'prueba', null);
-  var html = pieza.formato === 'newsletter' ? e.html : '<!doctype html><html><body style="margin:0;padding:20px;background:#fff">' + e.html + '</body></html>';
+  var html = pieza.formato === 'newsletter' || esHtml(pieza.cuerpo) ? e.html : '<!doctype html><html><body style="margin:0;padding:20px;background:#fff">' + e.html + '</body></html>';
   return { asunto: e.asunto, html: html, para: c.email };
 }
 

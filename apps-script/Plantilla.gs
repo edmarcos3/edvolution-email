@@ -104,7 +104,41 @@ function htmlPersonal(md, aj) {
     '<p style="margin:26px 0 0;font-size:11.5px;color:#999">' + escHtml(aj.pie) + ' · Si prefieres no recibir más emails, <a href="%%BAJA%%" style="color:#999">avísame aquí</a>.</p></div>%%PIXEL%%';
 }
 
+/** El cuerpo es HTML propio (pegado tal cual) si empieza por una etiqueta. */
+function esHtml(cuerpo) { return /^\s*</.test(String(cuerpo || '')); }
+
+/**
+ * HTML pegado: se respeta tal cual. Variables: {{nombre}}…, y {{baja}} (o {{unsubscribe_url}}) para el enlace de baja.
+ * Si no lleva enlace de baja, se añade un pie legal con él (obligatorio en envíos comerciales).
+ */
+function htmlPropio(html, aj) {
+  html = String(html).replace(/\{\{\s*(baja|unsubscribe_url)\s*\}\}/gi, '%%BAJA%%');
+  if (html.indexOf('%%BAJA%%') < 0) {
+    var pie = '<div style="padding:18px 12px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8a91a3">' +
+      escHtml(aj.pie) + '<br><a href="%%BAJA%%" style="color:#8a91a3;text-decoration:underline">Darme de baja</a></div>';
+    html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, pie + '</body>') : html + pie;
+  }
+  return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, '%%PIXEL%%</body>') : html + '%%PIXEL%%';
+}
+
+/** HTML final de una pieza según su formato (o el HTML pegado). */
+function construirHtml(md, asunto, aj, formato) {
+  if (esHtml(md)) return htmlPropio(md, aj);
+  return formato === 'newsletter' ? htmlNewsletter(md, asunto, aj) : htmlPersonal(md, aj);
+}
+
+function htmlATexto(html) {
+  return String(html)
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<a\s[^>]*href="(https?:[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, function (_, u, t) { t = t.replace(/<[^>]+>/g, '').trim(); return t ? t + ' (' + u + ')' : u; })
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|h\d|li|tr|table)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, ' ').replace(/\n\s*\n\s*(\n\s*)+/g, '\n\n').trim();
+}
+
 function textoPlano(md, aj, bajaUrl) {
+  if (esHtml(md)) return htmlATexto(md.replace(/\{\{\s*(baja|unsubscribe_url)\s*\}\}/gi, bajaUrl)) + '\n\n--\n' + aj.pie + '\nBaja: ' + bajaUrl;
   var t = String(md || '')
     .replace(/^\s*>>\s*\[([^\]]+)\]\(([^)]+)\)\s*$/gm, '$1: $2')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
@@ -129,7 +163,7 @@ function prepararEmail(pieza, contacto, envioId, enlaces) {
   var aj = ajustes();
   var md = personalizar(pieza.cuerpo, contacto);
   var asunto = personalizar(pieza.asunto, contacto);
-  var html = pieza.formato === 'newsletter' ? htmlNewsletter(md, asunto, aj) : htmlPersonal(md, aj);
+  var html = construirHtml(md, asunto, aj, pieza.formato);
   var urls = enlaces || urlsDe(html);
   var seguimiento = envioId !== 'prueba' && aj.exec && aj.pages;
   var bajaUrl = seguimiento ? aj.pages + '/baja.html?e=' + envioId : 'mailto:' + aj.remitente + '?subject=Baja';
