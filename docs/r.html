@@ -15,6 +15,19 @@
     if (r && /^https?:\/\//.test(r.url || '')) location.replace(r.url); else { hecho = false; fallo(); }
   };
   if (!/^[a-f0-9]{16}$/.test(e) || !/^\d+$/.test(l)) return fallo();
+  // Camino rápido: destino en un dominio propio → se apunta el clic en segundo plano y se redirige ya.
+  var u = q.get('u') || '';
+  try {
+    var dest = new URL(u);
+    var propio = /^https?:$/.test(dest.protocol) && (window.EDV_DOMINIOS || []).some(function (d) { return dest.hostname === d || dest.hostname.slice(-(d.length + 1)) === '.' + d; });
+    if (propio) {
+      hecho = true;
+      try { fetch(window.EDV_EXEC_URL + '?a=c&e=' + e + '&l=' + l, { mode: 'no-cors', keepalive: true }); }
+      catch (x) { new Image().src = window.EDV_EXEC_URL + '?a=c&e=' + e + '&l=' + l; }
+      location.replace(dest.href);
+      return;
+    }
+  } catch (x) { /* sin u o URL no válida: camino seguro */ }
   var s = document.createElement('script');
   s.src = window.EDV_EXEC_URL + '?a=c&e=' + e + '&l=' + l + '&callback=destino';
   s.onerror = fallo;

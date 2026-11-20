@@ -136,7 +136,8 @@ function prepararEmail(pieza, contacto, envioId, enlaces) {
   if (seguimiento) {
     html = html.replace(/href="(https?:\/\/[^"]+)"/g, function (m, u) {
       var n = urls.indexOf(u);
-      return n < 0 ? m : 'href="' + aj.pages + '/r.html?e=' + envioId + '&amp;l=' + n + '"';
+      // u = destino (solo se usa para redirigir al instante si es un dominio de Edvolution; el registro usa el nº de enlace)
+      return n < 0 ? m : 'href="' + aj.pages + '/r.html?e=' + envioId + '&amp;l=' + n + '&amp;u=' + encodeURIComponent(u.replace(/&amp;/g, '&')) + '"';
     });
   }
   html = html.replace(/%%BAJA%%/g, escHtml(bajaUrl))
