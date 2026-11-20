@@ -76,3 +76,18 @@ Copia la URL que termina en **`/exec`**.
 - **LSSI (art. 21)**: no se pueden enviar emails comerciales a quien no lo haya consentido, salvo a clientes con relación previa. Apunta el consentimiento en Contactos.
 - Las aperturas se miden con una imagen invisible; Gmail y Apple Mail la cargan por su cuenta. Mencionadlo en la política de privacidad y fiaos más de clics y respuestas.
 - Si cambias `Web.gs`, en Apps Script: **Implementar → Gestionar implementaciones → editar → Versión: nueva**. La URL `/exec` no cambia.
+
+---
+
+## Panel web en landings.edvolution.io/email
+
+El panel también funciona como web estática, fuera de la hoja de cálculo.
+
+1. Genera el zip con `node web/build.mjs`. Crea `edvolution-email-web.zip`.
+2. Sube su contenido al servidor de forma que quede en `https://landings.edvolution.io/email/`: `index.html` (el panel), `r.html` (clics), `baja.html` (bajas), `estilo.css` y `config.js`.
+3. En la hoja de Google de hola@: **Edvolution Email → Crear clave de acceso web**. Copia la clave, que solo se muestra una vez.
+4. Entra en `https://landings.edvolution.io/email/` y pega la clave. Se guarda solo en ese navegador. Para cerrar la sesión, usa el botón **Salir**.
+5. Si pierdes la clave o crees que alguien la tiene, crea otra: la anterior deja de funcionar al momento.
+
+Si cambias `Web.gs` o `Api.gs`, después de `clasp push` hay que actualizar la implementación (la URL no cambia):
+`clasp update-deployment --user hola AKfycbwR6xBNsO8v5S2e1fju9l2HmesSVjeggBUWGgnas45P6vpZWp30hcA19CsdgDHaHKlQvg`
