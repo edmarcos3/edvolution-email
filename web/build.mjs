@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 
 const BASE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(BASE, 'web', 'dist');
-const OUT = path.join(DIST, 'email');
 const config = fs.readFileSync(path.join(BASE, 'docs', 'config.js'), 'utf8');
 const exec = config.match(/EDV_EXEC_URL = '([^']+)'/)?.[1];
 if (!exec || !exec.endsWith('/exec')) throw new Error('docs/config.js no tiene la URL /exec');
@@ -80,11 +79,18 @@ let html = fs.readFileSync(path.join(BASE, 'apps-script', 'Ui.html'), 'utf8')
 if (!html.includes('EDV_EXEC_URL')) throw new Error('No se pudo inyectar el puente');
 
 fs.rmSync(DIST, { recursive: true, force: true });
-fs.mkdirSync(OUT, { recursive: true });
-fs.writeFileSync(path.join(OUT, 'index.html'), html);
-for (const f of ['r.html', 'baja.html', 'estilo.css', 'config.js']) fs.copyFileSync(path.join(BASE, 'docs', f), path.join(OUT, f));
+// Dos landings: "email" (Privado, el panel) y "enlaces" (Público, lo que abren los destinatarios)
+const PANEL = path.join(DIST, 'email'), PUBLICO = path.join(DIST, 'enlaces');
+fs.mkdirSync(PANEL, { recursive: true }); fs.mkdirSync(PUBLICO, { recursive: true });
+fs.writeFileSync(path.join(PANEL, 'index.html'), html);
+fs.copyFileSync(path.join(BASE, 'docs', 'config.js'), path.join(PANEL, 'config.js'));
+for (const f of ['r.html', 'baja.html', 'estilo.css', 'config.js']) fs.copyFileSync(path.join(BASE, 'docs', f), path.join(PUBLICO, f));
+fs.writeFileSync(path.join(PUBLICO, 'index.html'), fs.readFileSync(path.join(BASE, 'docs', 'index.html')));
 
-const zip = path.join(BASE, 'edvolution-email-web.zip');
-fs.rmSync(zip, { force: true });
-execFileSync('zip', ['-r', '-X', '-q', zip, 'email'], { cwd: DIST });
-console.log('Listo:', path.relative(BASE, zip), fs.readdirSync(OUT).join(', '));
+for (const [nombre, carpeta] of [['email-panel-PRIVADO.zip', 'email'], ['enlaces-PUBLICO.zip', 'enlaces']]) {
+  const zip = path.join(BASE, nombre);
+  fs.rmSync(zip, { force: true });
+  execFileSync('zip', ['-r', '-X', '-q', zip, carpeta], { cwd: DIST });
+  console.log('Listo:', nombre, '→', fs.readdirSync(path.join(DIST, carpeta)).join(', '));
+}
+fs.rmSync(path.join(BASE, 'edvolution-email-web.zip'), { force: true });

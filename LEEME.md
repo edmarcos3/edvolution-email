@@ -83,8 +83,8 @@ Copia la URL que termina en **`/exec`**.
 
 El panel también funciona como web estática, fuera de la hoja de cálculo.
 
-1. Genera el zip con `node web/build.mjs`. Crea `edvolution-email-web.zip`.
-2. Sube su contenido al servidor de forma que quede en `https://landings.edvolution.io/email/`: `index.html` (el panel), `r.html` (clics), `baja.html` (bajas), `estilo.css` y `config.js`.
+1. Genera el zip con `node web/build.mjs`. Crea `email-panel-PRIVADO.zip` y `enlaces-PUBLICO.zip`.
+2. Sube su contenido al servidor de forma que quede en `https://landings.edvolution.io`: dos landings. `email-panel-PRIVADO.zip` → landing **email** en estado *Privado* (el panel). `enlaces-PUBLICO.zip` → landing **enlaces** en estado *Público* (clics y bajas, que abren los destinatarios).
 3. En la hoja de Google de hola@: **Edvolution Email → Crear clave de acceso web**. Copia la clave, que solo se muestra una vez.
 4. Entra en `https://landings.edvolution.io/email/` y pega la clave. Se guarda solo en ese navegador. Para cerrar la sesión, usa el botón **Salir**.
 5. Si pierdes la clave o crees que alguien la tiene, crea otra: la anterior deja de funcionar al momento.
