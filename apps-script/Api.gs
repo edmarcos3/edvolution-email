@@ -42,7 +42,19 @@ function datosApp() {
       return o;
     }).reverse(),
     hojaUrl: libro().getUrl(),
+    ejemplos: ejemplosPorLista(contactos),
   };
+}
+
+/** Un contacto activo por lista (y '' = cualquiera) para la vista previa en el navegador. */
+function ejemplosPorLista(contactos) {
+  var r = {};
+  contactos.filter(activo).forEach(function (c) {
+    var e = { nombre: c.nombre, organizacion: c.organizacion, cargo: c.cargo, email: String(c.email).trim().toLowerCase() };
+    if (!r['']) r[''] = e;
+    listasDe(c).forEach(function (l) { if (!r[l]) r[l] = e; });
+  });
+  return r;
 }
 
 function obtenerCampana(id) {
@@ -82,6 +94,7 @@ function guardarCampana(o) {
       var sh = hoja('Pasos');
       leer('Pasos').filter(function (p) { return String(p.secuencia_id) === String(id); }).map(function (p) { return p._fila; })
         .sort(function (a, b) { return b - a; }).forEach(function (f) { sh.deleteRow(f); });
+      olvidar('Pasos');
       anadirVarios('Pasos', pasos.map(function (p, i) { return { secuencia_id: id, paso: i + 1, dias: i === 0 ? 0 : Number(p.dias) || 3, asunto: p.asunto || '', cuerpo: p.cuerpo || '' }; }));
     }
     return id;
@@ -175,9 +188,11 @@ function eliminarCampana(id) {
     var sh = hoja(nombre);
     leer(nombre).filter(function (x) { return String(x[campo]) === String(id); }).map(function (x) { return x._fila; })
       .sort(function (a, b) { return b - a; }).forEach(function (f) { sh.deleteRow(f); });
+    olvidar(nombre);
   };
   borrar('Pasos', 'secuencia_id'); borrar('Enlaces', 'campana_id'); borrar('Inscripciones', 'secuencia_id');
   hoja('Campanas').deleteRow(c._fila);
+  olvidar('Campanas');
   return true;
 }
 

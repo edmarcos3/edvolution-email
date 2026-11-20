@@ -83,12 +83,16 @@ const PLANTILLA_SEC = [
 
 function toast(m, ms = 4000) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), ms); }
 function cargando(t = 'Cargando…') { app.innerHTML = `<div class="vacio"><span class="spin"></span> ${t}</div>`; }
-function tab(t) { document.querySelectorAll('header [data-tab]').forEach((b) => b.classList.toggle('activa', b.dataset.tab === t)); }
+function tab(t) { E.vista = t; document.querySelectorAll('header [data-tab]').forEach((b) => b.classList.toggle('activa', b.dataset.tab === t)); }
 
 // ── Inicio ───────────────────────────────────────────────────────────
 async function inicio() {
-  tab('inicio'); E.ed = null; cargando();
+  tab('inicio'); E.ed = null;
+  if (E.datos) pintarInicio(E.datos); else cargando(); // pinta al momento con lo que ya hay
   const d = E.datos = await run('datosApp');
+  if (E.vista === 'inicio') pintarInicio(d);
+}
+function pintarInicio(d) {
   const tot = d.campanas.reduce((a, c) => { const m = c.met; if (m) { a.env += m.enviados; a.ab += m.aperturas; a.cl += m.clics; a.re += m.respuestas; } return a; }, { env: 0, ab: 0, cl: 0, re: 0 });
   app.innerHTML = `<h1>Email desde ${esc(d.ajustes.remitente)}</h1>
     <p class="sub">Envíos automáticos cada 10 minutos. <a href="#" data-acc="procesar">Procesar ahora</a> · <a href="${esc(d.hojaUrl)}" target="_blank" rel="noopener">Abrir la hoja</a></p>
@@ -168,12 +172,12 @@ function vista() {
   vista.h = setTimeout(async () => {
     if (!E.ed) return;
     try {
-      const v = await run('vistaPrevia', pieza(), E.ed.lista);
+      const v = window.vistaLocal && E.datos ? window.vistaLocal(pieza(), E.datos.ajustes, (E.datos.ejemplos || {})[E.ed.lista || ''] || (E.datos.ejemplos || {})['']) : await run('vistaPrevia', pieza(), E.ed.lista);
       const f = $('#vista'); if (!f) return;
       f.srcdoc = v.html;
       $('#vistaInfo').innerHTML = `<b>${esc(v.asunto)}</b> · así lo verá ${esc(v.para)}`;
     } catch (e) { toast(e.message); }
-  }, 400);
+  }, window.vistaLocal ? 120 : 400);
 }
 async function guardar() {
   E.ed.id = await run('guardarCampana', E.ed);
@@ -330,7 +334,7 @@ document.addEventListener('click', async (ev) => {
       }
       case 'guardarAjustes': {
         const a = {}; document.querySelectorAll('[data-a]').forEach((i) => (a[i.dataset.a] = i.value));
-        await run('guardarAjustes', a); toast('Ajustes guardados'); return;
+        await run('guardarAjustes', a); E.datos = null; toast('Ajustes guardados'); return;
       }
     }
   } catch (e) { toast(e.message, 7000); }

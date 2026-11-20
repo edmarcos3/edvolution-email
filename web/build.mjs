@@ -73,9 +73,23 @@ const puente = `<meta name="robots" content="noindex, nofollow">
 @media (max-width: 760px) { .editor, .tres { grid-template-columns: 1fr !important; } header { flex-wrap: wrap; } .vista { position: static !important; } }
 </style>`;
 
+// Vista previa en el navegador con el mismo código de plantilla que usa Google (sin esperar al servidor)
+const plantilla = fs.readFileSync(path.join(BASE, 'apps-script', 'Plantilla.gs'), 'utf8');
+const vistaLocal = `<script>
+(function () {
+${plantilla}
+  window.vistaLocal = function (pieza, aj, c) {
+    c = c || { nombre: 'Lucía Martín', organizacion: 'Colegio Ejemplo', cargo: 'Directora', email: 'lucia@ejemplo.com' };
+    var md = personalizar(pieza.cuerpo, c), asunto = personalizar(pieza.asunto, c);
+    var html = (pieza.formato === 'newsletter' ? htmlNewsletter(md, asunto, aj) : htmlPersonal(md, aj)).replace(/%%BAJA%%/g, '#').replace('%%PIXEL%%', '');
+    if (pieza.formato !== 'newsletter') html = '<!doctype html><html><body style="margin:0;padding:20px;background:#fff">' + html + '</body></html>';
+    return { asunto: asunto, html: html, para: c.email };
+  };
+})();
+</script>`;
 let html = fs.readFileSync(path.join(BASE, 'apps-script', 'Ui.html'), 'utf8')
   .replace('<base target="_top">', '')
-  .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Edvolution Email</title>\n' + puente);
+  .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Edvolution Email</title>\n' + puente + vistaLocal);
 if (!html.includes('EDV_EXEC_URL')) throw new Error('No se pudo inyectar el puente');
 
 fs.rmSync(DIST, { recursive: true, force: true });

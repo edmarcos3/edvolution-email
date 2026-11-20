@@ -27,6 +27,8 @@ function doPost(e) {
 var API_PERMITIDAS = ['datosApp', 'obtenerCampana', 'guardarCampana', 'vistaPrevia', 'enviarPrueba', 'programar', 'inscribir',
   'cambiarEstado', 'eliminarCampana', 'detalleCampana', 'guardarAjustes', 'listarContactos', 'guardarContacto', 'importarContactos', 'procesar'];
 
+var API_LECTURA = ['datosApp', 'obtenerCampana', 'vistaPrevia', 'detalleCampana', 'listarContactos'];
+
 function huella(s) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8)
     .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
@@ -45,7 +47,13 @@ function apiWeb(e) {
   if (!claveValida(q.clave)) { Utilities.sleep(800); return salida({ error: 'CLAVE', mensaje: 'Clave de acceso incorrecta' }); }
   if (API_PERMITIDAS.indexOf(q.fn) < 0) return salida({ error: 'Función no permitida' });
   try {
+    var cache = CacheService.getScriptCache();
+    if (q.fn === 'datosApp') {
+      var guardado = cache.get('datosApp');
+      if (guardado) return ContentService.createTextOutput('{"r":' + guardado + '}').setMimeType(ContentService.MimeType.JSON);
+    } else if (API_LECTURA.indexOf(q.fn) < 0) cache.remove('datosApp'); // cualquier cambio invalida el resumen
     var r = globalThis[q.fn].apply(null, q.args || []);
+    if (q.fn === 'datosApp') { try { cache.put('datosApp', JSON.stringify(r), 90); } catch (x) { /* demasiado grande: sin caché */ } }
     return salida({ r: r === undefined ? null : JSON.parse(JSON.stringify(r)) });
   } catch (err) { return salida({ error: String(err.message || err) }); }
 }

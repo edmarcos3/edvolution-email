@@ -16,18 +16,28 @@ function prop(k, def) {
 }
 function setProps(obj) { PropertiesService.getScriptProperties().setProperties(obj); }
 
+var _libro = null, _hojas = {}, _memo = {};
 function libro() {
+  if (_libro) return _libro;
   var id = prop('SHEET_ID');
-  return id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  _libro = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  return _libro;
 }
 function hoja(nombre) {
-  var sh = libro().getSheetByName(nombre);
+  if (_hojas[nombre]) return _hojas[nombre];
+  var sh = _hojas[nombre] = libro().getSheetByName(nombre);
   if (!sh) throw new Error('Falta la pestaña "' + nombre + '". Ejecuta Edvolution Email → Configuración inicial.');
   return sh;
 }
 
 /** Devuelve las filas como objetos (con _fila = nº de fila en la hoja). */
+/** Lecturas memorizadas durante una misma ejecución (cada escritura invalida su pestaña). */
+function olvidar(nombre) { delete _memo[nombre]; }
 function leer(nombre) {
+  if (!_memo[nombre]) _memo[nombre] = leerHoja(nombre);
+  return _memo[nombre].map(function (o) { var c = {}; for (var k in o) c[k] = o[k]; return c; });
+}
+function leerHoja(nombre) {
   var sh = hoja(nombre);
   var v = sh.getDataRange().getValues();
   var cab = v.shift() || [];
@@ -38,13 +48,15 @@ function leer(nombre) {
   });
 }
 function fila(nombre, obj) { return HOJAS[nombre].map(function (c) { return obj[c] === undefined || obj[c] === null ? '' : obj[c]; }); }
-function anadir(nombre, obj) { hoja(nombre).appendRow(fila(nombre, obj)); }
+function anadir(nombre, obj) { olvidar(nombre); hoja(nombre).appendRow(fila(nombre, obj)); }
 function anadirVarios(nombre, objs) {
   if (!objs.length) return;
+  olvidar(nombre);
   var sh = hoja(nombre);
   sh.getRange(sh.getLastRow() + 1, 1, objs.length, HOJAS[nombre].length).setValues(objs.map(function (o) { return fila(nombre, o); }));
 }
 function actualizar(nombre, numFila, cambios) {
+  olvidar(nombre);
   var sh = hoja(nombre);
   var cab = HOJAS[nombre];
   Object.keys(cambios).forEach(function (k) {
