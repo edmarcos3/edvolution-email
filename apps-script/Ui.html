@@ -58,6 +58,7 @@
 <header>
   <b>edvolution <span>email</span></b>
   <button data-tab="inicio" class="activa">Inicio</button>
+  <button data-tab="contactos">Contactos</button>
   <button data-tab="ajustes">Ajustes</button>
   <span class="esp"></span>
   <button data-acc="nueva" data-tipo="campana">+ Campaña</button>
@@ -72,7 +73,7 @@ const fmt = (iso) => (iso ? new Date(iso).toLocaleString('es-ES', { day: 'numeri
 const pct = (a, b) => (b ? Math.round((100 * a) / b) + ' %' : '—');
 const run = (fn, ...args) => new Promise((ok, ko) => google.script.run.withSuccessHandler(ok).withFailureHandler((e) => ko(new Error(e.message || e)))[fn](...args));
 const app = $('#app');
-const E = { datos: null, ed: null, sel: 0 };
+const E = { datos: null, ed: null, sel: 0, con: { q: '', lista: '', estado: '', pagina: 1, editar: null } };
 const TIPO = { campana: 'Campaña', secuencia: 'Secuencia' };
 const PLANTILLA_SEC = [
   { dias: 0, asunto: '{{organizacion|Tu centro}} y la IA en el aula', cuerpo: 'Hola {{nombre}}:\n\nEscribe aquí el primer email. Breve, personal y con una sola pregunta al final.\n\n¿Te encaja una llamada de 20 minutos la semana que viene?' },
@@ -90,7 +91,7 @@ async function inicio() {
   const d = E.datos = await run('datosApp');
   const tot = d.campanas.reduce((a, c) => { const m = c.met; if (m) { a.env += m.enviados; a.ab += m.aperturas; a.cl += m.clics; a.re += m.respuestas; } return a; }, { env: 0, ab: 0, cl: 0, re: 0 });
   app.innerHTML = `<h1>Email desde ${esc(d.ajustes.remitente)}</h1>
-    <p class="sub">Los contactos se editan directamente en la pestaña <b>Contactos</b> de la hoja. Envíos automáticos cada 10 minutos.</p>
+    <p class="sub">Envíos automáticos cada 10 minutos. <a href="#" data-acc="procesar">Procesar ahora</a> · <a href="${esc(d.hojaUrl)}" target="_blank" rel="noopener">Abrir la hoja</a></p>
     ${d.seguimiento ? '' : '<div class="aviso"><b>Sin seguimiento todavía.</b> Los emails salen bien, pero no se miden aperturas ni clics y la baja es por email. Completa las URLs en <a href="#" data-tab="ajustes">Ajustes</a>.</div>'}
     <div class="kpis">
       <div class="kpi d"><b>${d.contactos.activos}</b><span>contactos activos</span></div>
@@ -108,7 +109,7 @@ async function inicio() {
         <td>${m.enviados || 0}</td><td class="pct">${pct(m.aperturas, m.enviados)}</td><td class="pct">${pct(m.clics, m.enviados)}</td><td class="pct">${pct(m.respuestas, m.enviados)}</td></tr>`; }).join('')}
     </table></div>` : '<div class="vacio">Aún no hay nada. Crea una <b>campaña</b> (un email a una lista) o una <b>secuencia</b> (varios emails con seguimiento que se paran si responden).</div>'}
     <h2>Listas</h2>
-    <div class="caja">${d.listas.length ? d.listas.map((l) => `<span class="estado">${esc(l.nombre)} · ${l.n}</span>`).join(' ') : '<span class="ayuda">Escribe nombres de lista en la columna <code>listas</code> de Contactos (separados por comas).</span>'}</div>
+    <div class="caja">${d.listas.length ? d.listas.map((l) => `<span class="estado">${esc(l.nombre)} · ${l.n}</span>`).join(' ') : '<span class="ayuda">Asigna listas a tus contactos en <a href="#" data-tab="contactos">Contactos</a> (p. ej. <code>webinar-nov, direcciones</code>).</span>'}</div>
     <p class="ayuda">"Aperturas" es orientativo: Gmail y Apple Mail cargan las imágenes por su cuenta. Fíate más de clics y respuestas.</p>`;
 }
 
@@ -219,6 +220,41 @@ async function detalle(id) {
       <td><span class="estado ${e.estado}">${e.rebote ? 'rebote' : e.baja ? 'baja' : esc(e.estado)}</span>${e.error ? `<div class="ayuda">${esc(e.error)}</div>` : ''}</td></tr>`).join('')}</table>` : '<p class="ayuda">Todavía no ha salido ningún email. El primer lote sale en la próxima vuelta (cada 10 min) o con Edvolution Email → Procesar envíos ahora.</p>'}</div>`;
 }
 
+// ── Contactos ────────────────────────────────────────────────────────
+async function contactos() {
+  tab('contactos'); E.ed = null; cargando();
+  const f = E.con;
+  const [r, d] = await Promise.all([run('listarContactos', { q: f.q, lista: f.lista, estado: f.estado, pagina: f.pagina }), E.datos ? E.datos : run('datosApp')]);
+  E.datos = d; f.filas = r.filas; f.pagina = r.pagina;
+  const ed = f.editar;
+  const campo = (k, t, extra = '') => `<div><label class="et">${t}</label><input data-c="${k}" value="${esc(ed[k] || '')}" ${extra}></div>`;
+  app.innerHTML = `<h1>Contactos</h1><p class="sub">${d.contactos.activos} activos · ${d.contactos.bajas} bajas · ${d.contactos.rebotados} rebotados. Solo personas que han dado su consentimiento (LSSI/RGPD).</p>
+    <div class="barra">
+      <input id="cq" placeholder="Buscar por email, nombre u organización" value="${esc(f.q)}" style="flex:1;min-width:200px">
+      <select id="cl" style="width:auto"><option value="">Todas las listas</option>${d.listas.map((l) => `<option ${l.nombre === f.lista ? 'selected' : ''}>${esc(l.nombre)}</option>`).join('')}</select>
+      <select id="ce" style="width:auto">${[['', 'Cualquier estado'], ['activo', 'Activos'], ['baja', 'Bajas'], ['rebotado', 'Rebotados']].map(([v, t]) => `<option value="${v}" ${v === f.estado ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <button class="btn" data-acc="buscarC">Buscar</button><button class="btn p" data-acc="nuevoC">+ Contacto</button>
+    </div>
+    ${ed ? `<div class="caja" style="margin-bottom:12px"><b>${ed.nuevo ? 'Nuevo contacto' : esc(ed.email)}</b>
+      <div class="tres">${ed.nuevo ? campo('email', 'Email', 'type="email"') : `<input type="hidden" data-c="email" value="${esc(ed.email)}">`}${campo('nombre', 'Nombre')}${campo('organizacion', 'Organización')}</div>
+      <div class="tres">${campo('cargo', 'Cargo')}${campo('listas', 'Listas (separadas por comas)')}<div><label class="et">Estado</label><select data-c="estado">${['activo', 'baja', 'rebotado'].map((v) => `<option ${v === (ed.estado || 'activo') ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
+      <div class="tres">${campo('consentimiento', 'Consentimiento (cómo y cuándo)', 'placeholder="Formulario webinar 12/11/2026"')}${campo('notas', 'Notas')}<div></div></div>
+      <div class="barra" style="margin:10px 0 0"><button class="btn p" data-acc="guardarC">Guardar</button><button class="btn" data-acc="cancelarC">Cancelar</button></div></div>` : ''}
+    <div class="caja">${r.filas.length ? `<table><tr><th>Email</th><th>Nombre</th><th>Organización</th><th>Listas</th><th>Estado</th><th></th></tr>
+      ${r.filas.map((c) => `<tr><td>${esc(c.email)}</td><td>${esc(c.nombre)}</td><td>${esc(c.organizacion)}<div class="ayuda">${esc(c.cargo)}</div></td><td class="ayuda">${esc(c.listas)}</td>
+        <td><span class="estado ${String(c.estado || 'activo') === 'activo' ? 'activa' : 'error'}">${esc(c.estado || 'activo')}</span></td><td><button class="btn peq" data-acc="editarC" data-email="${esc(c.email)}">Editar</button></td></tr>`).join('')}</table>
+      <div class="barra" style="margin:10px 0 0"><span class="ayuda">${r.total} contactos</span><span class="esp"></span><button class="btn peq" data-acc="paginaC" data-n="-1" ${r.pagina <= 1 ? 'disabled' : ''}>←</button><span class="ayuda">${r.pagina} / ${r.paginas}</span><button class="btn peq" data-acc="paginaC" data-n="1" ${r.pagina >= r.paginas ? 'disabled' : ''}>→</button></div>`
+      : '<p class="ayuda">No hay contactos con estos filtros.</p>'}</div>
+    <h2>Importar</h2><div class="caja">
+      <p class="ayuda" style="margin:0 0 6px">Pega filas copiadas de Excel o un CSV con cabecera (email, nombre, organización, cargo). Si el email ya existe, se le añaden las listas; las bajas no se reactivan.</p>
+      <textarea id="imp" style="min-height:110px" placeholder="email;nombre;organizacion;cargo"></textarea>
+      <div class="tres"><div><label class="et">Añadir a las listas</label><input id="impListas" placeholder="webinar-nov"></div><div><label class="et">Consentimiento (obligatorio)</label><input id="impCons" placeholder="Formulario webinar 12/11/2026"></div><div><label class="et">&nbsp;</label><button class="btn p" data-acc="importarC">Importar</button></div></div>
+    </div>`;
+  $('#cq').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { E.con.q = ev.target.value.trim(); E.con.pagina = 1; contactos(); } });
+  $('#cl').addEventListener('change', (ev) => { E.con.lista = ev.target.value; E.con.pagina = 1; contactos(); });
+  $('#ce').addEventListener('change', (ev) => { E.con.estado = ev.target.value; E.con.pagina = 1; contactos(); });
+}
+
 // ── Ajustes ──────────────────────────────────────────────────────────
 async function ajustes() {
   tab('ajustes'); E.ed = null; cargando();
@@ -235,8 +271,8 @@ async function ajustes() {
     </div><div class="caja">
       <b>Seguimiento de aperturas, clics y bajas</b>
       ${campo('exec', 'URL de la aplicación web de Apps Script', 'Implementar → Gestionar implementaciones → copia la URL que termina en <code>/exec</code>.')}
-      ${campo('pages', 'URL de GitHub Pages', 'Por ejemplo <code>https://tuusuario.github.io/edvolution-email</code>.')}
-      <p class="ayuda">Con las dos URLs, los enlaces pasan por tu página de GitHub (que apunta el clic y redirige) y se añade el enlace de baja con confirmación. Sin ellas, los emails salen igual pero sin medir.</p>
+      ${campo('pages', 'URL pública de las páginas de clic y baja', 'Donde está subido el panel web, p. ej. <code>https://landings.edvolution.io/email</code>.')}
+      <p class="ayuda">Con las dos URLs, los enlaces pasan por tu página pública (que apunta el clic y redirige) y se añade el enlace de baja con confirmación. Sin ellas, los emails salen igual pero sin medir.</p>
     </div></div>
     <div class="barra" style="margin-top:12px"><button class="btn p" data-acc="guardarAjustes">Guardar ajustes</button></div>`;
 }
@@ -248,7 +284,7 @@ document.addEventListener('click', async (ev) => {
   if (t.tagName === 'A') ev.preventDefault();
   const D = t.dataset;
   try {
-    if (D.tab) return D.tab === 'ajustes' ? ajustes() : inicio();
+    if (D.tab) return D.tab === 'ajustes' ? ajustes() : D.tab === 'contactos' ? contactos() : inicio();
     if (D.abrir) return abrir(D.abrir, D.estado);
     if (D.quitar) { E.ed.pasos.splice(Number(D.quitar), 1); E.sel = 0; return editor(); }
     if (D.estadoA) { await run('cambiarEstado', D.id, D.estadoA); toast('Hecho'); return D.estadoA === 'borrador' ? inicio() : detalle(D.id); }
@@ -277,6 +313,20 @@ document.addEventListener('click', async (ev) => {
         const r = await run('inscribir', D.id, $('#inscribir').value);
         toast(`${r.nuevos} añadidos` + (r.faltan.length ? ` · ${r.faltan.length} no están en Contactos` : '') + (r.inactivos.length ? ` · ${r.inactivos.length} de baja o rebotados` : ''), 7000);
         return detalle(D.id);
+      }
+      case 'procesar': { toast('Procesando…'); const r = await run('procesar'); toast(`${r.enviados} enviados · ${r.respuestas} respuestas · ${r.rebotes} rebotes nuevos`); return inicio(); }
+      case 'buscarC': E.con.q = $('#cq').value.trim(); E.con.pagina = 1; return contactos();
+      case 'paginaC': E.con.pagina += Number(D.n); return contactos();
+      case 'nuevoC': E.con.editar = { email: '', nombre: '', organizacion: '', cargo: '', listas: E.con.lista, estado: 'activo', consentimiento: '', notas: '', nuevo: true }; return contactos();
+      case 'editarC': E.con.editar = E.con.filas.find((c) => c.email === D.email); return contactos();
+      case 'cancelarC': E.con.editar = null; return contactos();
+      case 'guardarC': {
+        const c = {}; document.querySelectorAll('[data-c]').forEach((i) => (c[i.dataset.c] = i.value));
+        const r = await run('guardarContacto', c); toast(r === 'creado' ? 'Contacto añadido' : 'Contacto actualizado'); E.con.editar = null; E.datos = null; return contactos();
+      }
+      case 'importarC': {
+        const r = await run('importarContactos', $('#imp').value, $('#impListas').value, $('#impCons').value);
+        toast(`${r.nuevos} nuevos · ${r.actualizados} actualizados${r.invalidos ? ` · ${r.invalidos} filas sin email válido` : ''}`, 7000); E.datos = null; return contactos();
       }
       case 'guardarAjustes': {
         const a = {}; document.querySelectorAll('[data-a]').forEach((i) => (a[i.dataset.a] = i.value));

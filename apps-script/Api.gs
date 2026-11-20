@@ -201,3 +201,92 @@ function detalleCampana(id) {
       .map(function (i) { return { email: i.email, paso: i.paso, proximo: aIso(i.proximo), estado: i.estado }; }),
   };
 }
+
+// ── Contactos ────────────────────────────────────────────────────────
+var CAMPOS_CONTACTO = ['nombre', 'organizacion', 'cargo', 'listas', 'estado', 'consentimiento', 'notas'];
+var RE_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function listarContactos(f) {
+  f = f || {};
+  var q = String(f.q || '').toLowerCase().trim();
+  var todos = leer('Contactos').filter(function (c) {
+    if (f.lista && listasDe(c).indexOf(f.lista) < 0) return false;
+    var est = String(c.estado || 'activo').toLowerCase();
+    if (f.estado && est !== f.estado) return false;
+    if (q && [c.email, c.nombre, c.organizacion, c.cargo].join(' ').toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }).reverse();
+  var por = 50, pag = Math.max(1, Number(f.pagina) || 1);
+  return { total: todos.length, pagina: pag, paginas: Math.max(1, Math.ceil(todos.length / por)),
+    filas: todos.slice((pag - 1) * por, pag * por).map(function (c) { var o = limpio(c); delete o._fila; return o; }) };
+}
+
+/** Crea o actualiza un contacto por email. */
+function guardarContacto(c) {
+  var email = String(c.email || '').trim().toLowerCase();
+  if (!RE_EMAIL.test(email)) throw new Error('Email no válido');
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var actual = buscarFila('Contactos', email);
+    var datos = {};
+    CAMPOS_CONTACTO.forEach(function (k) { if (c[k] !== undefined) datos[k] = String(c[k]).trim(); });
+    if (datos.estado && ['activo', 'baja', 'rebotado'].indexOf(datos.estado) < 0) throw new Error('Estado no válido');
+    if (actual) { actualizar('Contactos', actual._fila, datos); return 'actualizado'; }
+    if (!datos.consentimiento) throw new Error('Indica cómo dio su consentimiento');
+    datos.email = email; datos.estado = datos.estado || 'activo'; datos.alta = new Date();
+    anadir('Contactos', datos);
+    return 'creado';
+  } finally { lock.releaseLock(); }
+}
+
+/** Importa filas pegadas o CSV (email, nombre, organización, cargo). Añade las listas indicadas; no reactiva bajas. */
+function importarContactos(texto, listas, consentimiento) {
+  if (!String(consentimiento || '').trim()) throw new Error('Indica cómo dieron su consentimiento');
+  var lineas = String(texto || '').replace(/^﻿/, '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+  if (!lineas.length) return { nuevos: 0, actualizados: 0, invalidos: 0 };
+  var sep = /\t/.test(lineas[0]) ? '\t' : ((lineas[0].match(/;/g) || []).length > (lineas[0].match(/,/g) || []).length ? ';' : ',');
+  var partir = function (l) {
+    var cols = [], cur = '', dentro = false;
+    for (var i = 0; i < l.length; i++) {
+      var ch = l[i];
+      if (ch === '"') { if (dentro && l[i + 1] === '"') { cur += '"'; i++; } else dentro = !dentro; }
+      else if (ch === sep && !dentro) { cols.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    return cols;
+  };
+  var cab = partir(lineas[0]).map(function (x) { return x.toLowerCase(); });
+  var idx = {
+    email: cab.findIndex(function (x) { return /e-?mail|correo/.test(x); }),
+    nombre: cab.findIndex(function (x) { return /^nombre|^name/.test(x); }),
+    organizacion: cab.findIndex(function (x) { return /organiza|centro|empresa|instituci|colegio/.test(x); }),
+    cargo: cab.findIndex(function (x) { return /cargo|puesto|rol/.test(x); }),
+  };
+  var filas = lineas.slice(1);
+  if (idx.email < 0) { filas = lineas; idx = { email: partir(lineas[0]).findIndex(function (x) { return /@/.test(x); }), nombre: -1, organizacion: -1, cargo: -1 }; }
+  var nuevasListas = String(listas || '').split(',').map(function (s) { return s.trim(); }).filter(String);
+  var lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    var existentes = {}; leer('Contactos').forEach(function (c) { existentes[String(c.email).trim().toLowerCase()] = c; });
+    var res = { nuevos: 0, actualizados: 0, invalidos: 0 }, altas = [], vistos = {};
+    filas.forEach(function (l) {
+      var c = partir(l), email = String(c[idx.email] || '').toLowerCase();
+      if (!RE_EMAIL.test(email) || vistos[email]) { if (!vistos[email]) res.invalidos++; return; }
+      vistos[email] = 1;
+      var val = function (k) { return idx[k] >= 0 ? c[idx[k]] || '' : ''; };
+      var ex = existentes[email];
+      if (ex) {
+        var ls = listasDe(ex); nuevasListas.forEach(function (x) { if (ls.indexOf(x) < 0) ls.push(x); });
+        var cambios = { listas: ls.join(', ') };
+        ['nombre', 'organizacion', 'cargo'].forEach(function (k) { if (!ex[k] && val(k)) cambios[k] = val(k); });
+        actualizar('Contactos', ex._fila, cambios); res.actualizados++;
+      } else {
+        altas.push({ email: email, nombre: val('nombre'), organizacion: val('organizacion'), cargo: val('cargo'), listas: nuevasListas.join(', '), estado: 'activo', consentimiento: consentimiento, alta: new Date() });
+        res.nuevos++;
+      }
+    });
+    anadirVarios('Contactos', altas);
+    return res;
+  } finally { lock.releaseLock(); }
+}

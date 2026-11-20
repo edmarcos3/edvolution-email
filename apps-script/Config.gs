@@ -2,7 +2,7 @@
 
 // URLs de esta instalación (se pueden cambiar en Ajustes de la app)
 var EXEC_URL_DEFECTO = 'https://script.google.com/macros/s/AKfycbwR6xBNsO8v5S2e1fju9l2HmesSVjeggBUWGgnas45P6vpZWp30hcA19CsdgDHaHKlQvg/exec';
-var PAGES_URL_DEFECTO = 'https://edmarcos3.github.io/edvolution-email';
+var PAGES_URL_DEFECTO = 'https://landings.edvolution.io/email';
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Edvolution Email')
@@ -10,6 +10,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Procesar envíos ahora', 'procesarDesdeMenu')
     .addItem('Configuración inicial', 'configurar')
+    .addItem('Crear clave de acceso web', 'crearClaveWeb')
     .addToUi();
 }
 
